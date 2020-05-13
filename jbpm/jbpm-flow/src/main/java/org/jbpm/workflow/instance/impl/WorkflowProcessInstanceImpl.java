@@ -86,6 +86,8 @@ import org.mvel2.integration.VariableResolverFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.jbpm.ruleflow.core.Metadata.UNIQUE_ID;
+
 /**
  * Default implementation of a RuleFlow process instance.
  */
@@ -142,7 +144,7 @@ public abstract class WorkflowProcessInstanceImpl extends ProcessInstanceImpl
 
     @Override
     public int getLevelForNode(String uniqueID) {
-        if ("true".equalsIgnoreCase(System.getProperty("jbpm.loop.level.disabled"))) {
+        if (Boolean.parseBoolean(System.getProperty("jbpm.loop.level.disabled"))) {
             return 1;
         }
 
@@ -193,22 +195,15 @@ public abstract class WorkflowProcessInstanceImpl extends ProcessInstanceImpl
 
     @Override
     public NodeInstance getNodeInstance(String nodeInstanceId) {
-        for (NodeInstance nodeInstance : nodeInstances) {
-            if (nodeInstance.getId().equals(nodeInstanceId)) {
-                return nodeInstance;
-            }
-        }
-        return null;
+        return getNodeInstance(nodeInstanceId, false);
     }
 
     @Override
     public NodeInstance getNodeInstance(String nodeInstanceId, boolean recursive) {
-        for (NodeInstance nodeInstance : getNodeInstances(recursive)) {
-            if (nodeInstance.getId().equals(nodeInstanceId)) {
-                return nodeInstance;
-            }
-        }
-        return null;
+        return getNodeInstances(recursive).stream()
+                .filter(nodeInstance -> nodeInstance.getId().equals(nodeInstanceId))
+                .findFirst()
+                .orElse(null);
     }
 
     public List<String> getActiveNodeIds() {
@@ -265,7 +260,7 @@ public abstract class WorkflowProcessInstanceImpl extends ProcessInstanceImpl
 
         for (Node node : nodeContainer.getNodes()) {
 
-            if (nodeDefinitionId.equals(node.getMetaData().get("UniqueId"))) {
+            if (nodeDefinitionId.equals(node.getMetaData().get(UNIQUE_ID))) {
                 return getNodeInstance(node);
             }
 

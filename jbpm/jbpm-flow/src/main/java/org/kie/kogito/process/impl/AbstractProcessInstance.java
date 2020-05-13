@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import org.jbpm.process.instance.InternalProcessRuntime;
 import org.jbpm.ruleflow.core.RuleFlowProcess;
+import org.jbpm.workflow.core.WorkflowProcess;
 import org.jbpm.workflow.instance.NodeInstance;
 import org.jbpm.workflow.instance.NodeInstanceContainer;
 import org.jbpm.workflow.instance.WorkflowProcessInstance;
@@ -163,6 +164,13 @@ public abstract class AbstractProcessInstance<T extends Model> implements Proces
             this.status = legacyProcessInstance.getState();
         }
     }
+
+    public void complete() {
+        if(((WorkflowProcess)legacyProcessInstance.getProcess()).isDynamic() && this.status.equals(ProcessInstance.STATE_ACTIVE)) {
+            ((WorkflowProcessInstance)legacyProcessInstance).setState(STATE_ACTIVE);
+            this.status = ProcessInstance.STATE_COMPLETED;
+        }
+    }
     
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected void addToUnitOfWork(Consumer<ProcessInstance<T>> action) {
@@ -170,7 +178,6 @@ public abstract class AbstractProcessInstance<T extends Model> implements Proces
     }
 
     public void abort() {
-
         String pid = legacyProcessInstance().getId();
         unbind(variables, legacyProcessInstance().getVariables());        
         this.rt.abortProcessInstance(pid);
@@ -299,7 +306,7 @@ public abstract class AbstractProcessInstance<T extends Model> implements Proces
         removeOnFinish();
     }
 
-    private org.kie.api.runtime.process.ProcessInstance legacyProcessInstance() {
+    protected org.kie.api.runtime.process.ProcessInstance legacyProcessInstance() {
         if (this.legacyProcessInstance == null) {
             this.legacyProcessInstance = reloadSupplier.get();
             if (this.legacyProcessInstance == null) {

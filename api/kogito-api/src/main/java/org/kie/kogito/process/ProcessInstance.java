@@ -65,7 +65,12 @@ public interface ProcessInstance<T> {
      * @param referenceId optional reference id that points to a another  component triggering this instance
      */
     void startFrom(String nodeId, String referenceId);
-    
+
+    /**
+     * Completes a dynamic process that is in the ACTIVE state.
+     */
+    void complete();
+
     /**
      * Sends given signal into this process instance
      * @param signal signal to be processed

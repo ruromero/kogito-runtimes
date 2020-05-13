@@ -20,12 +20,16 @@ public class Metadata {
 
     public static final String ACTION = "Action";
     public static final String TRIGGER_REF = "TriggerRef";
+    public static final String REF = "Ref";
     public static final String MESSAGE_TYPE = "MessageType";
     public static final String TRIGGER_TYPE = "TriggerType";
     public static final String TRIGGER_MAPPING = "TriggerMapping";
     public static final String MAPPING_VARIABLE = "MappingVariable";
     public static final String EVENT_TYPE = "EventType";
     public static final String EVENT_TYPE_TIMER = "Timer";
+    public static final String EVENT_TYPE_SIGNAL = "signal";
+    public static final String EVENT_TYPE_MESSAGE = "message";
+    public static final String CUSTOM_SCOPE = "customScope";
     public static final String ATTACHED_TO = "AttachedTo";
     public static final String TIME_CYCLE = "TimeCycle";
     public static final String TIME_DURATION = "TimeDuration";

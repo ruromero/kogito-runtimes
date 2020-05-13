@@ -53,10 +53,13 @@ public class MilestoneNodeInstance extends StateBasedNodeInstance implements Age
             throw new IllegalArgumentException(
                     "A MilestoneNode only accepts default incoming connections!");
         }
-        String rule = "RuleFlow-Milestone-" + getProcessInstance().getProcessId()
-                + "-" + getMilestoneNode().getUniqueId();
-        boolean isActive = ((InternalAgenda) getProcessInstance().getKnowledgeRuntime().getAgenda())
-                .isRuleActiveInRuleFlowGroup("DROOLS_SYSTEM", rule, getProcessInstance().getId());
+        boolean isActive = true;
+        if(getProcessInstance().getKnowledgeRuntime().hasAgenda()) {
+            String rule = "RuleFlow-Milestone-" + getProcessInstance().getProcessId()
+                    + "-" + getMilestoneNode().getUniqueId();
+            isActive = ((InternalAgenda) getProcessInstance().getKnowledgeRuntime().getAgenda())
+                    .isRuleActiveInRuleFlowGroup("DROOLS_SYSTEM", rule, getProcessInstance().getId());
+        }
         if (isActive) {
             triggerCompleted();
         } else {

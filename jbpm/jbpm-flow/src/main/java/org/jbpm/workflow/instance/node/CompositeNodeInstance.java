@@ -242,19 +242,11 @@ public class CompositeNodeInstance extends StateBasedNodeInstance implements Nod
     }
 
     public NodeInstance getNodeInstance(final Node node) {
-        // TODO do this cleaner for start / end of composite?
         if (node instanceof CompositeNode.CompositeNodeStart) {
-            CompositeNodeStartInstance nodeInstance = new CompositeNodeStartInstance();
-            nodeInstance.setNodeId(node.getId());
-            nodeInstance.setNodeInstanceContainer(this);
-            nodeInstance.setProcessInstance(getProcessInstance());
-            return nodeInstance;
-        } else if (node instanceof CompositeNode.CompositeNodeEnd) {
-            CompositeNodeEndInstance nodeInstance = new CompositeNodeEndInstance();
-            nodeInstance.setNodeId(node.getId());
-            nodeInstance.setNodeInstanceContainer(this);
-            nodeInstance.setProcessInstance(getProcessInstance());
-            return nodeInstance;
+            return buildCompositeNodeInstance(new CompositeNodeStartInstance(), node);
+        }
+        if (node instanceof CompositeNode.CompositeNodeEnd) {
+            return buildCompositeNodeInstance(new CompositeNodeEndInstance(), node);
         }
         Node actualNode = node;
 
@@ -266,6 +258,13 @@ public class CompositeNodeInstance extends StateBasedNodeInstance implements Nod
         if (nodeInstance == null) {
             throw new IllegalArgumentException("Illegal node type: " + node.getClass());
         }
+        return nodeInstance;
+    }
+
+    private NodeInstance buildCompositeNodeInstance(NodeInstanceImpl nodeInstance, Node node) {
+        nodeInstance.setNodeId(node.getId());
+        nodeInstance.setNodeInstanceContainer(this);
+        nodeInstance.setProcessInstance(getProcessInstance());
         return nodeInstance;
     }
 
