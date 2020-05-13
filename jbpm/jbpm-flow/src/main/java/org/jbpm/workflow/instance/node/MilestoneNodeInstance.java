@@ -54,7 +54,8 @@ public class MilestoneNodeInstance extends StateBasedNodeInstance implements Age
                     "A MilestoneNode only accepts default incoming connections!");
         }
         boolean isActive = true;
-        if(getProcessInstance().getKnowledgeRuntime().hasAgenda()) {
+        // KOGITO-2168 Conditions not supported
+        if(getProcessInstance().getKnowledgeRuntime().getAgenda() != null) {
             String rule = "RuleFlow-Milestone-" + getProcessInstance().getProcessId()
                     + "-" + getMilestoneNode().getUniqueId();
             isActive = ((InternalAgenda) getProcessInstance().getKnowledgeRuntime().getAgenda())

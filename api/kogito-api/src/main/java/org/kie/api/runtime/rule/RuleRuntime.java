@@ -46,13 +46,6 @@ public interface RuleRuntime
     Agenda getAgenda();
 
     /**
-     * @return true if the Runtime supports the Agenda
-     */
-    default boolean hasAgenda() {
-        return true;
-    }
-
-    /**
      * @return the WorkingMemoryEntryPoint instance associated with the given name.
      */
     EntryPoint getEntryPoint(String name);
