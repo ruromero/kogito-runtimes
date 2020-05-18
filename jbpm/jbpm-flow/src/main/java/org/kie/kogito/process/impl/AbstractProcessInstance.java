@@ -166,8 +166,11 @@ public abstract class AbstractProcessInstance<T extends Model> implements Proces
     }
 
     public void complete() {
-        if(((WorkflowProcess)legacyProcessInstance.getProcess()).isDynamic() && this.status.equals(ProcessInstance.STATE_ACTIVE)) {
-            ((WorkflowProcessInstance)legacyProcessInstance).setState(STATE_ACTIVE);
+        if (!(legacyProcessInstance.getProcess() instanceof WorkflowProcess)) {
+            return;
+        }
+        if (((WorkflowProcess) legacyProcessInstance.getProcess()).isDynamic() && this.status.equals(ProcessInstance.STATE_ACTIVE)) {
+            ((WorkflowProcessInstance) legacyProcessInstance).setState(STATE_ACTIVE);
             this.status = ProcessInstance.STATE_COMPLETED;
         }
     }
@@ -445,7 +448,7 @@ public abstract class AbstractProcessInstance<T extends Model> implements Proces
             return false;
         if (getClass() != obj.getClass())
             return false;
-        AbstractProcessInstance other = (AbstractProcessInstance) obj;
+        AbstractProcessInstance<?> other = (AbstractProcessInstance) obj;
         if (id == null) {
             if (other.id != null)
                 return false;
