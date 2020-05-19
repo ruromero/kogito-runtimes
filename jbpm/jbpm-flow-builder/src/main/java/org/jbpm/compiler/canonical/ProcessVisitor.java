@@ -16,6 +16,13 @@
 
 package org.jbpm.compiler.canonical;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AssignExpr;
@@ -60,13 +67,6 @@ import org.jbpm.workflow.core.node.TimerNode;
 import org.jbpm.workflow.core.node.WorkItemNode;
 import org.kie.api.definition.process.Connection;
 import org.kie.api.definition.process.WorkflowProcess;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static org.jbpm.ruleflow.core.Metadata.HIDDEN;
 import static org.jbpm.ruleflow.core.Metadata.LINK_NODE_HIDDEN;
@@ -173,11 +173,8 @@ public class ProcessVisitor extends AbstractVisitor {
     private void visitSubVariableScopes(org.kie.api.definition.process.Node[] nodes, BlockStmt body, Set<String> visitedVariables) {
         for (org.kie.api.definition.process.Node node : nodes) {
             if (node instanceof ContextContainer) {
-                VariableScope variableScope = (VariableScope)
-                        ((ContextContainer) node).getDefaultContext(VariableScope.VARIABLE_SCOPE);
-                if (variableScope != null) {
-                    visitVariableScope(variableScope, body, visitedVariables);
-                }
+                VariableScope variableScope = (VariableScope)((ContextContainer) node).getDefaultContext(VariableScope.VARIABLE_SCOPE);
+                visitVariableScope(variableScope, body, visitedVariables);
             }
             if (node instanceof NodeContainer) {
                 visitSubVariableScopes(((NodeContainer) node).getNodes(), body, visitedVariables);

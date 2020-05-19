@@ -50,6 +50,7 @@ public class AdHocSubProcessTest extends AbstractCodegenTest {
         ProcessInstance<?> processInstance = p.createInstance(m);
         processInstance.start();
         assertThat(processInstance.status()).isEqualTo(ProcessInstance.STATE_ACTIVE);
+//        processInstance.stages();
         assertThat(processInstance.workItems().size()).isEqualTo(1);
         WorkItem workItem = processInstance.workItems(securityPolicy).get(0);
 
@@ -85,6 +86,31 @@ public class AdHocSubProcessTest extends AbstractCodegenTest {
         assertThat(processInstance.status()).isEqualTo(ProcessInstance.STATE_ACTIVE);
 
         processInstance.complete();
+        assertThat(processInstance.status()).isEqualTo(ProcessInstance.STATE_COMPLETED);
+    }
+
+    @Test
+    public void testCaseFile() throws Exception {
+                Application app = generateCodeProcessesOnly("cases/CaseFileAdHoc.bpmn");
+        assertThat(app).isNotNull();
+
+        Process<? extends Model> p = app.processes().processById("TestCase.CaseFileAdHoc");
+
+        Model m = p.createModel();
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("caseFile_name", "Foo");
+        parameters.put("name", "Bar");
+        m.fromMap(parameters);
+
+        ProcessInstance<?> processInstance = p.createInstance(m);
+        processInstance.start();
+        assertThat(processInstance.status()).isEqualTo(ProcessInstance.STATE_ACTIVE);
+
+        processInstance.complete();
+        //Process variable should not be updated in the sub-process
+        assertThat(((Model)processInstance.variables()).toMap().get("name")).isEqualTo("Bar-process-subprocess");
+        //CaseFile variable should be updated in the sub-process
+        assertThat(((Model)processInstance.variables()).toMap().get("caseFile_name")).isEqualTo("Foo-process-subprocess");
         assertThat(processInstance.status()).isEqualTo(ProcessInstance.STATE_COMPLETED);
     }
 }

@@ -58,6 +58,11 @@ public class VariableScope extends AbstractContext {
         this.variables = variables;
     }
 
+    public VariableScope addVariable(Variable variable) {
+        this.variables.add(variable);
+        return this;
+    }
+
     public String[] getVariableNames() {
         final String[] result = new String[this.variables.size()];
         if (this.variables != null) {
