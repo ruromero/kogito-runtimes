@@ -75,13 +75,13 @@ public class AdHocSubProcessTest extends AbstractCodegenTest {
 
         Model m = p.createModel();
         Map<String, Object> parameters = new HashMap<>();
-        parameters.put("val", 0);
+        parameters.put("currentStage", 0);
         m.fromMap(parameters);
 
         ProcessInstance<?> processInstance = p.createInstance(m);
         processInstance.start();
 
-        assertThat(((Model)processInstance.variables()).toMap().get("val")).isEqualTo(0);
+        assertThat(((Model)processInstance.variables()).toMap().get("currentStage")).isEqualTo(3);
         assertThat(processInstance.workItems().size()).isEqualTo(0);
         assertThat(processInstance.status()).isEqualTo(ProcessInstance.STATE_ACTIVE);
 

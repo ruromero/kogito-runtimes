@@ -66,8 +66,7 @@
             <drools:metaValue><![CDATA[true]]></drools:metaValue>
           </drools:metaData>
         </bpmn2:extensionElements>
-        <bpmn2:script><![CDATA[Integer currentStage = (Integer) kcontext.getVariable("currentStage");
-kcontext.setVariable("currentStage", currentStage++);
+        <bpmn2:script><![CDATA[kcontext.setVariable("currentStage", ++currentStage);
 System.out.println("Current Stage: " + currentStage);]]></bpmn2:script>
       </bpmn2:scriptTask>
       <bpmn2:completionCondition xsi:type="bpmn2:tFormalExpression" id="_XIND0ZXkEeqE1q4SB7wiYA" language="http://www.mvel.org/2.0"><![CDATA[autocomplete]]></bpmn2:completionCondition>
@@ -89,8 +88,7 @@ System.out.println("Current Stage: " + currentStage);]]></bpmn2:script>
             <drools:metaValue><![CDATA[true]]></drools:metaValue>
           </drools:metaData>
         </bpmn2:extensionElements>
-        <bpmn2:script><![CDATA[Integer currentStage = (Integer) kcontext.getVariable("currentStage");
-kcontext.setVariable("currentStage", currentStage++);
+        <bpmn2:script><![CDATA[kcontext.setVariable("currentStage", ++currentStage);
 System.out.println("Current Stage: " + currentStage);]]></bpmn2:script>
       </bpmn2:scriptTask>
       <bpmn2:completionCondition xsi:type="bpmn2:tFormalExpression" id="_XIND0pXkEeqE1q4SB7wiYA" language="http://www.mvel.org/2.0"><![CDATA[autocomplete]]></bpmn2:completionCondition>
@@ -112,8 +110,7 @@ System.out.println("Current Stage: " + currentStage);]]></bpmn2:script>
             <drools:metaValue><![CDATA[true]]></drools:metaValue>
           </drools:metaData>
         </bpmn2:extensionElements>
-        <bpmn2:script><![CDATA[Integer currentStage = (Integer) kcontext.getVariable("currentStage");
-kcontext.setVariable("currentStage", currentStage++);
+        <bpmn2:script><![CDATA[kcontext.setVariable("currentStage", ++currentStage);
 System.out.println("Current Stage: " + currentStage);]]></bpmn2:script>
       </bpmn2:scriptTask>
       <bpmn2:completionCondition xsi:type="bpmn2:tFormalExpression" id="_XIND05XkEeqE1q4SB7wiYA" language="http://www.mvel.org/2.0"><![CDATA[autocomplete]]></bpmn2:completionCondition>
