@@ -12,17 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kie.kogito.conf;
 
-import java.util.Optional;
+package org.kie.kogito.transport;
 
-import org.kie.kogito.transport.TransportConfig;
+import java.util.Collection;
 
-public interface ConfigBean {
+public interface TransportFilter {
 
-    Optional<Boolean> useCloudEvents();
+    Collection<String> getValues();
 
-    String getServiceUrl();
+    default boolean accepts(String key) {
+        return getValues().stream().anyMatch(v -> key != null && key.equalsIgnoreCase(v));
+    }
 
-    TransportConfig transportConfig();
 }

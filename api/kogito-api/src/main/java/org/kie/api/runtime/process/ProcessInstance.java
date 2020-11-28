@@ -120,4 +120,16 @@ public interface ProcessInstance
      */
     String getReferenceId();
 
+    /**
+     * @return the ProcessInstance metadata
+     */
+    Map<String, Object> getMetaData();
+
+    /**
+     * Sets a ProcessInstance metadata entry
+     * @param name Name of the Metadata key
+     * @param data Data identified by the provided Metadata Key
+     */
+    void setMetaData(String name, Object data);
+
 }

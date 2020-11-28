@@ -34,6 +34,7 @@ import io.vertx.ext.web.client.WebClient;
 import org.kie.api.runtime.process.WorkItem;
 import org.kie.api.runtime.process.WorkItemHandler;
 import org.kie.api.runtime.process.WorkItemManager;
+import org.kie.kogito.transport.TransportConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,10 +93,13 @@ public class RestWorkItemHandler implements WorkItemHandler {
         URI uri = URI.create(endPoint);
         String host = uri.getHost() != null ? uri.getHost() : hostProp;
         int port = uri.getPort() > 0 ? uri.getPort() : Integer.parseInt(portProp);
+
         HttpRequest<Buffer> request = client.request(method, port, host, uri.getPath());
         if (user != null && !user.trim().isEmpty() && password != null && !password.trim().isEmpty()) {
             request.basicAuthentication(user, password);
         }
+        addHeadersFromContext(workItem, request);
+
         // execute request
         Handler<AsyncResult<HttpResponse<Buffer>>> handler = event -> {
             if (event.failed()) {
@@ -117,6 +121,17 @@ public class RestWorkItemHandler implements WorkItemHandler {
             request.sendJson(body, handler);
         } else {
             request.send(handler);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addHeadersFromContext(WorkItem workItem, HttpRequest<Buffer> request) {
+        if(workItem.getProcessInstance() == null) {
+            return;
+        }
+        Map<String, String> transportContext = (Map<String, String>) workItem.getProcessInstance().getMetaData().get(TransportConfig.TRANSPORT_CONTEXT);
+        if(transportContext != null) {
+            transportContext.forEach(request::putHeader);
         }
     }
 

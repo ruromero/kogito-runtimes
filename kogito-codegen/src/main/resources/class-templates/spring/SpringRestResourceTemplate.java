@@ -18,7 +18,6 @@ package com.myspace.demo;
 
 import java.net.URI;
 import java.util.List;
-
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -26,6 +25,7 @@ import com.fasterxml.jackson.databind.jsonschema.JsonSchema;
 import org.kie.api.runtime.process.WorkItemNotFoundException;
 import org.jbpm.util.JsonSchemaUtil;
 import org.kie.kogito.Application;
+import org.kie.kogito.conf.ConfigBean;
 import org.kie.kogito.process.Process;
 import org.kie.kogito.process.ProcessInstance;
 import org.kie.kogito.process.ProcessInstanceReadMode;
@@ -36,6 +36,7 @@ import org.kie.kogito.process.workitem.Policies;
 import org.kie.kogito.services.uow.UnitOfWorkExecutor;
 import org.jbpm.process.instance.impl.humantask.HumanTaskTransition;
 
+import org.kie.kogito.transport.TransportConfig;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -62,6 +63,8 @@ public class $Type$Resource {
 
     Application application;
 
+    ConfigBean configBean;
+
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<$Type$Output> createResource_$name$(@RequestHeader HttpHeaders httpHeaders,
                                                               @RequestParam(value = "businessKey", required = false) String businessKey,
@@ -71,7 +74,7 @@ public class $Type$Resource {
             $Type$Input inputModel = resource != null ? resource : new $Type$Input();
             ProcessInstance<$Type$> pi = process.createInstance(businessKey, inputModel.toModel());
             List<String> startFromNode = httpHeaders.get("X-KOGITO-StartFromNode");
-
+            addTransportHeaders(pi, httpHeaders);
             if (startFromNode != null && !startFromNode.isEmpty()) {
                 pi.startFrom(startFromNode.get(0));
             } else {
@@ -139,4 +142,10 @@ public class $Type$Resource {
                 .map(m -> ResponseEntity.ok(m))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
+
+    private void addTransportHeaders(ProcessInstance<$Type$> instance, HttpHeaders httpHeaders) {
+        Map<String, String> transportContext = configBean.transportConfig().buildContext(httpHeaders);
+        instance.setContextAttr(TransportConfig.TRANSPORT_CONTEXT, transportContext);
+    }
+
 }

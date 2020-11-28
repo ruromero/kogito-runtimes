@@ -96,6 +96,10 @@ public interface ProcessInstance<T> {
      */
     T updateVariables(T updates);
 
+    Object getContextAttr(String name);
+
+    void setContextAttr(String name, Object value);
+
     /**
      * Returns current status of this process instance
      *

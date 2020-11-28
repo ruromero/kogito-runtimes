@@ -17,7 +17,6 @@
 package org.jbpm.process.instance;
 
 import java.util.Date;
-import java.util.Map;
 
 import org.drools.core.common.InternalKnowledgeRuntime;
 import org.jbpm.workflow.instance.NodeInstance;
@@ -62,10 +61,6 @@ public interface ProcessInstance extends org.kie.api.runtime.process.ProcessInst
     void setRootProcessInstanceId(String parentId);
 
     void setRootProcessId(String processId);
-
-    Map<String, Object> getMetaData();
-
-    void setMetaData(String name, Object data);
 
     Object getFaultData();
 

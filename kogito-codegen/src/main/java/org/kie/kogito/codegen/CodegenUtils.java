@@ -117,6 +117,10 @@ public class CodegenUtils {
         return fd.getElementType().asClassOrInterfaceType().getNameAsString().equals("Application");
     }
 
+    public static boolean isConfigBean(FieldDeclaration fd) {
+        return fd.getElementType().asClassOrInterfaceType().getNameAsString().equals("ConfigBean");
+    }
+
     public static boolean isObjectMapperField(FieldDeclaration fd) {
         return fd.getElementType().asClassOrInterfaceType().getNameAsString().equals("ObjectMapper");
     }

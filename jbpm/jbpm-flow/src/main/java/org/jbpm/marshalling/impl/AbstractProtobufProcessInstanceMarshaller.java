@@ -32,10 +32,10 @@ import org.drools.core.common.InternalWorkingMemory;
 import org.drools.core.impl.InternalKnowledgeBase;
 import org.drools.core.marshalling.impl.MarshallerReaderContext;
 import org.drools.core.marshalling.impl.MarshallerWriteContext;
-import org.drools.serialization.protobuf.ProtobufMessages.Header;
 import org.drools.core.process.instance.KogitoWorkItem;
 import org.drools.core.process.instance.impl.KogitoWorkItemImpl;
 import org.drools.serialization.protobuf.PersisterHelper;
+import org.drools.serialization.protobuf.ProtobufMessages.Header;
 import org.jbpm.marshalling.impl.JBPMMessages.ProcessInstance.NodeInstanceContent;
 import org.jbpm.marshalling.impl.JBPMMessages.ProcessInstance.NodeInstanceContent.RuleSetNode.TextMapEntry;
 import org.jbpm.marshalling.impl.JBPMMessages.ProcessInstance.NodeInstanceType;
@@ -72,6 +72,7 @@ import org.kie.api.runtime.process.ProcessInstance;
 import org.kie.api.runtime.process.WorkItem;
 import org.kie.api.runtime.process.WorkflowProcessInstance;
 import org.kie.api.runtime.rule.FactHandle;
+import org.kie.kogito.transport.TransportConfig;
 
 /**
  * Default implementation of a process instance marshaller.
@@ -143,15 +144,8 @@ public abstract class AbstractProtobufProcessInstanceMarshaller
             }
         }
 
-        List<NodeInstance> nodeInstances = new ArrayList<NodeInstance>( workFlow.getNodeInstances() );
-        Collections.sort( nodeInstances,
-                          new Comparator<NodeInstance>() {
-
-                              public int compare(NodeInstance o1,
-                                                 NodeInstance o2) {
-                                  return (int) (o1.getId().compareTo(o2.getId()));
-                              }
-                          } );
+        List<NodeInstance> nodeInstances = new ArrayList<>(workFlow.getNodeInstances());
+        Collections.sort( nodeInstances, Comparator.comparing(NodeInstance::getId));
         for ( NodeInstance nodeInstance : nodeInstances ) {
             _instance.addNodeInstance( writeNodeInstance( context,
                                                           nodeInstance ) );
@@ -173,28 +167,29 @@ public abstract class AbstractProtobufProcessInstanceMarshaller
 
         VariableScopeInstance variableScopeInstance = (VariableScopeInstance) workFlow.getContextInstance( VariableScope.VARIABLE_SCOPE );
         List<Map.Entry<String, Object>> variables = new ArrayList<Map.Entry<String, Object>>( variableScopeInstance.getVariables().entrySet() );
-        Collections.sort( variables,
-                          new Comparator<Map.Entry<String, Object>>() {
-                              public int compare(Map.Entry<String, Object> o1,
-                                                 Map.Entry<String, Object> o2) {
-                                  return o1.getKey().compareTo( o2.getKey() );
-                              }
-                          } );
+        Collections.sort( variables, Comparator.comparing(Map.Entry::getKey));
 
         for ( Map.Entry<String, Object> variable : variables ) {
             if ( variable.getValue() != null ) {
                 _instance.addVariable( ProtobufProcessMarshaller.marshallVariable( context, variable.getKey(), variable.getValue() ) );
             }
         }
-        
-        List<Map.Entry<String, Integer>> iterationlevels = new ArrayList<Map.Entry<String, Integer>>( workFlow.getIterationLevels().entrySet() );
-        Collections.sort( iterationlevels,
-                          new Comparator<Map.Entry<String, Integer>>() {
-                              public int compare(Map.Entry<String, Integer> o1,
-                                                 Map.Entry<String, Integer> o2) {
-                                  return o1.getKey().compareTo( o2.getKey() );
-                              }
-                          } );
+
+        if(workFlow.getMetaData() != null && workFlow.getMetaData().containsKey(TransportConfig.TRANSPORT_CONTEXT)) {
+            Map<String, Object> transportContext = (Map<String, Object>) workFlow.getMetaData().get(TransportConfig.TRANSPORT_CONTEXT);
+            transportContext.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(e -> {
+                if(e.getValue() != null) {
+                    try {
+                        _instance.addTransportContext(ProtobufProcessMarshaller.marshallVariable(context, e.getKey(), e.getValue()));
+                    } catch (Exception ex) {
+                        throw new RuntimeException("Unable to marshal process instance transport context", ex);
+                    }
+                }
+            });
+        }
+
+        List<Map.Entry<String, Integer>> iterationlevels = new ArrayList<>(workFlow.getIterationLevels().entrySet());
+        Collections.sort( iterationlevels, Comparator.comparing(Map.Entry::getKey));
 
         for ( Map.Entry<String, Integer> level : iterationlevels ) {
             if ( level.getValue() != null ) {
@@ -811,6 +806,19 @@ public abstract class AbstractProtobufProcessInstanceMarshaller
                                                                _value );
                 } catch ( ClassNotFoundException e ) {
                     throw new IllegalArgumentException( "Could not reload variable " + _variable.getName() );
+                }
+            }
+        }
+
+        if (_instance.getTransportContextCount() > 0) {
+            Map<String, Object> transportContext = new HashMap<>();
+            processInstance.setMetaData(TransportConfig.TRANSPORT_CONTEXT, transportContext);
+            for (JBPMMessages.Variable _transportContext : _instance.getTransportContextList()) {
+                try {
+                    Object _value = ProtobufProcessMarshaller.unmarshallVariableValue(context, _transportContext);
+                    transportContext.put(_transportContext.getName(), _value);
+                } catch (ClassNotFoundException e) {
+                    throw new IllegalArgumentException("Could not reload metadata " + _transportContext.getName());
                 }
             }
         }

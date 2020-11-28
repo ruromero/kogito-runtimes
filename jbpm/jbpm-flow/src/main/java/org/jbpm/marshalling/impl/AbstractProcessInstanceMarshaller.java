@@ -19,6 +19,7 @@ package org.jbpm.marshalling.impl;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -50,6 +51,7 @@ import org.kie.api.runtime.process.NodeInstance;
 import org.kie.api.runtime.process.NodeInstanceContainer;
 import org.kie.api.runtime.process.ProcessInstance;
 import org.kie.api.runtime.process.WorkflowProcessInstance;
+import org.kie.kogito.transport.TransportConfig;
 
 /**
  * Default implementation of a process instance marshaller.
@@ -301,6 +303,21 @@ public abstract class AbstractProcessInstanceMarshaller implements
 	                stream.writeObject(variables.get(key));
 	            }
             }
+
+            if(compositeNodeInstance.getMetaData() == null && !compositeNodeInstance.getMetaData().containsKey(TransportConfig.TRANSPORT_CONTEXT)) {
+                stream.writeInt(0);
+            } else {
+                Map<String, Object> transportContext = (Map<String, Object>) compositeNodeInstance.getMetaData().get(TransportConfig.TRANSPORT_CONTEXT);
+                stream.writeInt(transportContext.size());
+                transportContext.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(e -> {
+                    try {
+                        stream.writeUTF(e.getKey());
+                        stream.writeObject(e.getValue());
+                    } catch (IOException ex) {
+                        throw new RuntimeException("Unable to serialize transport context", ex);
+                    }
+                });
+            }
             List<NodeInstance> nodeInstances = new ArrayList<NodeInstance>(compositeNodeInstance.getNodeInstances());
             Collections.sort(nodeInstances,
                     new Comparator<NodeInstance>() {
@@ -416,40 +433,55 @@ public abstract class AbstractProcessInstanceMarshaller implements
 			VariableScopeInstance variableScopeInstance = (VariableScopeInstance) processInstance
 					.getContextInstance(variableScope);
 			for (int i = 0; i < nbVariables; i++) {
-				String name = stream.readUTF();
-				try {
-			        ObjectMarshallingStrategy strategy = null;
-					int index = stream.readInt();
-			        // This is the old way of de/serializing strategy objects
-			        if ( index >= 0 ) {
-			            strategy = context.getResolverStrategyFactory().getStrategy( index );
-			        }
-			        // This is the new way 
-			        else if( index == -2 ) { 
-			            String strategyClassName = context.readUTF();
-			            if ( ! StringUtils.isEmpty(strategyClassName) ) { 
-			                strategy = context.getResolverStrategyFactory().getStrategyObject(strategyClassName);
-			                if( strategy == null ) { 
-			                    throw new IllegalStateException( "No strategy of type " + strategyClassName + " available." );
-			                }
-			            }
-			        }
-			        // If either way retrieves a strategy, use it
-			        Object value = null;
-			        if( strategy != null ) { 
-			            value = strategy.read( stream );
-			        }
-					variableScopeInstance.internalSetVariable(name, value);
-				} catch (ClassNotFoundException e) {
-					throw new IllegalArgumentException(
-							"Could not reload variable " + name);
-				}
+                Map.Entry<String, Object> entry = unmarshallVariable(stream, context);
+                variableScopeInstance.internalSetVariable(entry.getKey(), entry.getValue());
 			}
 		}
+
+        int nbTransportCtx = stream.readInt();
+        if (nbTransportCtx > 0) {
+            Map<String, Object> transportContext = new HashMap<>();
+            processInstance.setMetaData(TransportConfig.TRANSPORT_CONTEXT, transportContext);
+            for (int i = 0; i < nbTransportCtx; i++) {
+                Map.Entry<String, Object> entry = unmarshallVariable(stream, context);
+                transportContext.put(entry.getKey(), entry.getValue());
+            }
+        }
         if (wm != null) {
             processInstance.reconnect();
         }
         return processInstance;
+    }
+
+    private Map.Entry<String, Object> unmarshallVariable(ObjectInputStream stream, MarshallerReaderContext context) throws IOException {
+        String name = stream.readUTF();
+        try {
+            ObjectMarshallingStrategy strategy = null;
+            int index = stream.readInt();
+            // This is the old way of de/serializing strategy objects
+            if (index >= 0) {
+                strategy = context.getResolverStrategyFactory().getStrategy(index);
+            }
+            // This is the new way
+            else if (index == -2) {
+                String strategyClassName = context.readUTF();
+                if (!StringUtils.isEmpty(strategyClassName)) {
+                    strategy = context.getResolverStrategyFactory().getStrategyObject(strategyClassName);
+                    if (strategy == null) {
+                        throw new IllegalStateException("No strategy of type " + strategyClassName + " available.");
+                    }
+                }
+            }
+            // If either way retrieves a strategy, use it
+            Object value = null;
+            if (strategy != null) {
+                value = strategy.read(stream);
+            }
+            return new AbstractMap.SimpleEntry<>(name, value);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException(
+                    "Could not reload variable " + name);
+        }
     }
 
     protected abstract WorkflowProcessInstanceImpl createProcessInstance();

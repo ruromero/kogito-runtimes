@@ -15,6 +15,15 @@
 
 package org.kie.kogito.codegen.process;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier.Keyword;
 import com.github.javaparser.ast.NodeList;
@@ -38,15 +47,7 @@ import org.kie.kogito.codegen.CodegenUtils;
 import org.kie.kogito.codegen.GeneratorContext;
 import org.kie.kogito.codegen.context.KogitoBuildContext;
 import org.kie.kogito.codegen.di.DependencyInjectionAnnotator;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+import org.kie.kogito.conf.StaticConfigBean;
 
 import static com.github.javaparser.StaticJavaParser.parse;
 import static org.kie.kogito.codegen.CodegenUtils.interpolateTypes;
@@ -56,8 +57,9 @@ import static org.kie.kogito.codegen.CodegenUtils.interpolateTypes;
  */
 public abstract class AbstractResourceGenerator {
 
-    private final String relativePath;
+    private static final String CONFIG_BEAN_CANONICAL_NAME = StaticConfigBean.class.getCanonicalName();
 
+    private final String relativePath;
     private final GeneratorContext context;
     private final String resourceClazzName;
     private final String processClazzName;
@@ -236,12 +238,18 @@ public abstract class AbstractResourceGenerator {
 
             template.findAll(FieldDeclaration.class,
                     CodegenUtils::isApplicationField).forEach(fd -> annotator.withInjection(fd));
+
+            template.findAll(FieldDeclaration.class,
+                    CodegenUtils::isConfigBean).forEach(fd -> annotator.withInjection(fd));
         } else {
             template.findAll(FieldDeclaration.class,
                     CodegenUtils::isProcessField).forEach(this::initializeProcessField);
 
             template.findAll(FieldDeclaration.class,
                     CodegenUtils::isApplicationField).forEach(this::initializeApplicationField);
+
+            template.findAll(FieldDeclaration.class,
+                    CodegenUtils::isConfigBean).forEach(this::initializeConfigBeanField);
         }
 
         // if triggers are not empty remove createResource method as there is another trigger to start process instances
@@ -300,6 +308,10 @@ public abstract class AbstractResourceGenerator {
 
     private void initializeApplicationField(FieldDeclaration fd) {
         fd.getVariable(0).setInitializer(new ObjectCreationExpr().setType(appCanonicalName));
+    }
+
+    private void initializeConfigBeanField(FieldDeclaration fd) {
+        fd.getVariable(0).setInitializer(new ObjectCreationExpr().setType(CONFIG_BEAN_CANONICAL_NAME));
     }
 
     private void interpolateStrings(StringLiteralExpr vv) {
