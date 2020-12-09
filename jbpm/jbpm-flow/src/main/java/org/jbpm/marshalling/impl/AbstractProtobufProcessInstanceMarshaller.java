@@ -165,28 +165,8 @@ public abstract class AbstractProtobufProcessInstanceMarshaller
             }
         }
 
-        VariableScopeInstance variableScopeInstance = (VariableScopeInstance) workFlow.getContextInstance( VariableScope.VARIABLE_SCOPE );
-        List<Map.Entry<String, Object>> variables = new ArrayList<Map.Entry<String, Object>>( variableScopeInstance.getVariables().entrySet() );
-        Collections.sort( variables, Comparator.comparing(Map.Entry::getKey));
-
-        for ( Map.Entry<String, Object> variable : variables ) {
-            if ( variable.getValue() != null ) {
-                _instance.addVariable( ProtobufProcessMarshaller.marshallVariable( context, variable.getKey(), variable.getValue() ) );
-            }
-        }
-
-        if(workFlow.getMetaData() != null && workFlow.getMetaData().containsKey(TransportConfig.TRANSPORT_CONTEXT)) {
-            Map<String, Object> transportContext = (Map<String, Object>) workFlow.getMetaData().get(TransportConfig.TRANSPORT_CONTEXT);
-            transportContext.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(e -> {
-                if(e.getValue() != null) {
-                    try {
-                        _instance.addTransportContext(ProtobufProcessMarshaller.marshallVariable(context, e.getKey(), e.getValue()));
-                    } catch (Exception ex) {
-                        throw new RuntimeException("Unable to marshal process instance transport context", ex);
-                    }
-                }
-            });
-        }
+        marshalVariableScope(context, workFlow, _instance);
+        marshalTransportContext(context, workFlow, _instance);
 
         List<Map.Entry<String, Integer>> iterationlevels = new ArrayList<>(workFlow.getIterationLevels().entrySet());
         Collections.sort( iterationlevels, Comparator.comparing(Map.Entry::getKey));
@@ -201,6 +181,33 @@ public abstract class AbstractProtobufProcessInstanceMarshaller
         }
         
         return _instance.build();
+    }
+
+    private void marshalVariableScope(MarshallerWriteContext context, WorkflowProcessInstanceImpl workFlow, JBPMMessages.ProcessInstance.Builder _instance) throws IOException {
+        VariableScopeInstance variableScopeInstance = (VariableScopeInstance) workFlow.getContextInstance( VariableScope.VARIABLE_SCOPE );
+        List<Map.Entry<String, Object>> variables = new ArrayList<Map.Entry<String, Object>>( variableScopeInstance.getVariables().entrySet() );
+        Collections.sort( variables, Comparator.comparing(Map.Entry::getKey));
+
+        for ( Map.Entry<String, Object> variable : variables ) {
+            if ( variable.getValue() != null ) {
+                _instance.addVariable( ProtobufProcessMarshaller.marshallVariable( context, variable.getKey(), variable.getValue() ) );
+            }
+        }
+    }
+
+    private void marshalTransportContext(MarshallerWriteContext context, WorkflowProcessInstanceImpl workFlow, JBPMMessages.ProcessInstance.Builder _instance) {
+        if(workFlow.getMetaData() != null && workFlow.getMetaData().containsKey(TransportConfig.TRANSPORT_CONTEXT)) {
+            Map<String, Object> transportContext = (Map<String, Object>) workFlow.getMetaData().get(TransportConfig.TRANSPORT_CONTEXT);
+            transportContext.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(e -> {
+                if(e.getValue() != null) {
+                    try {
+                        _instance.addTransportContext(ProtobufProcessMarshaller.marshallVariable(context, e.getKey(), e.getValue()));
+                    } catch (Exception ex) {
+                        throw new RuntimeException("Unable to marshal process instance transport context", ex);
+                    }
+                }
+            });
+        }
     }
 
     public JBPMMessages.ProcessInstance.NodeInstance writeNodeInstance(MarshallerWriteContext context,
@@ -794,22 +801,37 @@ public abstract class AbstractProtobufProcessInstanceMarshaller
             }
         }
 
+        unmarshalVariableScope(context, _instance, processInstance, (org.jbpm.process.core.Process) process);
+        unmarshalTransportContext(context, _instance, processInstance);
+
+        if ( _instance.getIterationLevelsCount() > 0 ) {
+            
+            for ( JBPMMessages.IterationLevel _level : _instance.getIterationLevelsList()) {
+                processInstance.getIterationLevels().put(_level.getId(), _level.getLevel());
+            }
+        }            	
+        return processInstance;
+    }
+
+    private void unmarshalVariableScope(MarshallerReaderContext context, JBPMMessages.ProcessInstance _instance, WorkflowProcessInstanceImpl processInstance, org.jbpm.process.core.Process process) throws IOException {
         if ( _instance.getVariableCount() > 0 ) {
-            Context variableScope = ((org.jbpm.process.core.Process) process)
+            Context variableScope = process
                     .getDefaultContext( VariableScope.VARIABLE_SCOPE );
             VariableScopeInstance variableScopeInstance = (VariableScopeInstance) processInstance
                     .getContextInstance( variableScope );
             for ( JBPMMessages.Variable _variable : _instance.getVariableList() ) {
                 try {
                     Object _value = ProtobufProcessMarshaller.unmarshallVariableValue( context, _variable );
-                    variableScopeInstance.internalSetVariable( _variable.getName(), 
+                    variableScopeInstance.internalSetVariable( _variable.getName(),
                                                                _value );
                 } catch ( ClassNotFoundException e ) {
                     throw new IllegalArgumentException( "Could not reload variable " + _variable.getName() );
                 }
             }
         }
+    }
 
+    private void unmarshalTransportContext(MarshallerReaderContext context, JBPMMessages.ProcessInstance _instance, WorkflowProcessInstanceImpl processInstance) throws IOException {
         if (_instance.getTransportContextCount() > 0) {
             Map<String, Object> transportContext = new HashMap<>();
             processInstance.setMetaData(TransportConfig.TRANSPORT_CONTEXT, transportContext);
@@ -822,14 +844,6 @@ public abstract class AbstractProtobufProcessInstanceMarshaller
                 }
             }
         }
-        
-        if ( _instance.getIterationLevelsCount() > 0 ) {
-            
-            for ( JBPMMessages.IterationLevel _level : _instance.getIterationLevelsList()) {
-                processInstance.getIterationLevels().put(_level.getId(), _level.getLevel());
-            }
-        }            	
-        return processInstance;
     }
 
     protected abstract WorkflowProcessInstanceImpl createProcessInstance();

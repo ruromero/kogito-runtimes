@@ -284,41 +284,9 @@ public abstract class AbstractProcessInstanceMarshaller implements
             } else {
                 stream.writeInt(0);
             }
-            VariableScopeInstance variableScopeInstance = (VariableScopeInstance) compositeNodeInstance.getContextInstance(VariableScope.VARIABLE_SCOPE);
-            if (variableScopeInstance == null) {
-            	stream.writeInt(0);
-            } else {
-	            Map<String, Object> variables = variableScopeInstance.getVariables();
-	            List<String> keys = new ArrayList<String>(variables.keySet());
-	            Collections.sort(keys,
-	                    new Comparator<String>() {
-	                        public int compare(String o1,
-	                                String o2) {
-	                            return o1.compareTo(o2);
-	                        }
-	                    });
-	            stream.writeInt(keys.size());
-	            for (String key : keys) {
-	                stream.writeUTF(key);
-	                stream.writeObject(variables.get(key));
-	            }
-            }
-
-            if(compositeNodeInstance.getMetaData() == null && !compositeNodeInstance.getMetaData().containsKey(TransportConfig.TRANSPORT_CONTEXT)) {
-                stream.writeInt(0);
-            } else {
-                Map<String, Object> transportContext = (Map<String, Object>) compositeNodeInstance.getMetaData().get(TransportConfig.TRANSPORT_CONTEXT);
-                stream.writeInt(transportContext.size());
-                transportContext.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(e -> {
-                    try {
-                        stream.writeUTF(e.getKey());
-                        stream.writeObject(e.getValue());
-                    } catch (IOException ex) {
-                        throw new RuntimeException("Unable to serialize transport context", ex);
-                    }
-                });
-            }
-            List<NodeInstance> nodeInstances = new ArrayList<NodeInstance>(compositeNodeInstance.getNodeInstances());
+            marshalVariableScope(stream, compositeNodeInstance);
+            marshalTransportContext(stream, compositeNodeInstance);
+            List<NodeInstance> nodeInstances = new ArrayList<>(compositeNodeInstance.getNodeInstances());
             Collections.sort(nodeInstances,
                     new Comparator<NodeInstance>() {
 
@@ -372,6 +340,39 @@ public abstract class AbstractProcessInstanceMarshaller implements
         }
     }
 
+    private void marshalVariableScope(ObjectOutputStream stream, CompositeContextNodeInstance compositeNodeInstance) throws IOException {
+        VariableScopeInstance variableScopeInstance = (VariableScopeInstance) compositeNodeInstance.getContextInstance(VariableScope.VARIABLE_SCOPE);
+        if (variableScopeInstance == null) {
+            stream.writeInt(0);
+        } else {
+            Map<String, Object> variables = variableScopeInstance.getVariables();
+            List<String> keys = new ArrayList<>(variables.keySet());
+            Collections.sort(keys, String::compareTo);
+            stream.writeInt(keys.size());
+            for (String key : keys) {
+                stream.writeUTF(key);
+                stream.writeObject(variables.get(key));
+            }
+        }
+    }
+
+    private void marshalTransportContext(ObjectOutputStream stream, CompositeContextNodeInstance compositeNodeInstance) throws IOException {
+        if(compositeNodeInstance.getMetaData() == null && !compositeNodeInstance.getMetaData().containsKey(TransportConfig.TRANSPORT_CONTEXT)) {
+            stream.writeInt(0);
+        } else {
+            Map<String, Object> transportContext = (Map<String, Object>) compositeNodeInstance.getMetaData().get(TransportConfig.TRANSPORT_CONTEXT);
+            stream.writeInt(transportContext.size());
+            transportContext.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(e -> {
+                try {
+                    stream.writeUTF(e.getKey());
+                    stream.writeObject(e.getValue());
+                } catch (IOException ex) {
+                    throw new RuntimeException("Unable to serialize transport context", ex);
+                }
+            });
+        }
+    }
+
     // Input methods
     public ProcessInstance readProcessInstance(MarshallerReaderContext context) throws IOException {
         ObjectInputStream stream = (ObjectInputStream) context;
@@ -420,24 +421,35 @@ public abstract class AbstractProcessInstanceMarshaller implements
             }
     	}
 
-        // Process Variables
-        // - Number of Variables = keys.size()
-        // For Each Variable
-            // - Variable Key
-            // - Marshalling Strategy Index
-            // - Marshalled Object
-		int nbVariables = stream.readInt();
-		if (nbVariables > 0) {
-			Context variableScope = ((org.jbpm.process.core.Process) process)
-					.getDefaultContext(VariableScope.VARIABLE_SCOPE);
-			VariableScopeInstance variableScopeInstance = (VariableScopeInstance) processInstance
-					.getContextInstance(variableScope);
-			for (int i = 0; i < nbVariables; i++) {
+        unmarshalVariableScope(context, stream, processInstance, (org.jbpm.process.core.Process) process);
+        unmarshalTransportContext(context, stream, processInstance);
+        if (wm != null) {
+            processInstance.reconnect();
+        }
+        return processInstance;
+    }
+
+    // Process Variables
+    // - Number of Variables = keys.size()
+    // For Each Variable
+    // - Variable Key
+    // - Marshalling Strategy Index
+    // - Marshalled Object
+    private void unmarshalVariableScope(MarshallerReaderContext context, ObjectInputStream stream, WorkflowProcessInstanceImpl processInstance, org.jbpm.process.core.Process process) throws IOException {
+        int nbVariables = stream.readInt();
+        if (nbVariables > 0) {
+            Context variableScope = process
+                    .getDefaultContext(VariableScope.VARIABLE_SCOPE);
+            VariableScopeInstance variableScopeInstance = (VariableScopeInstance) processInstance
+                    .getContextInstance(variableScope);
+            for (int i = 0; i < nbVariables; i++) {
                 Map.Entry<String, Object> entry = unmarshallVariable(stream, context);
                 variableScopeInstance.internalSetVariable(entry.getKey(), entry.getValue());
-			}
-		}
+            }
+        }
+    }
 
+    private void unmarshalTransportContext(MarshallerReaderContext context, ObjectInputStream stream, WorkflowProcessInstanceImpl processInstance) throws IOException {
         int nbTransportCtx = stream.readInt();
         if (nbTransportCtx > 0) {
             Map<String, Object> transportContext = new HashMap<>();
@@ -447,10 +459,6 @@ public abstract class AbstractProcessInstanceMarshaller implements
                 transportContext.put(entry.getKey(), entry.getValue());
             }
         }
-        if (wm != null) {
-            processInstance.reconnect();
-        }
-        return processInstance;
     }
 
     private Map.Entry<String, Object> unmarshallVariable(ObjectInputStream stream, MarshallerReaderContext context) throws IOException {
